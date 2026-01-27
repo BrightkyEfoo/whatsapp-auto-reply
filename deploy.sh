@@ -24,6 +24,10 @@ DEPLOY_BASE="~/system/service/x7k9m2v4"
 BOT_DIR="${DEPLOY_BASE}/whatsapp-svc"
 NETWORK_NAME="x7k9-wbot-net"
 
+# GitHub repo
+REPO="git@github.com:BrightkyEfoo/whatsapp-auto-reply.git"
+BRANCH="main"
+
 # Obfuscated names
 BOT_IMAGE="x7k9-wbot"
 BOT_CONTAINER="x7k9-wbot-1"
@@ -120,34 +124,8 @@ setup_server() {
     log_success "Serveur configuré"
 }
 
-upload_files() {
-    log_step "Upload des fichiers"
-
-    log_info "Compression des fichiers..."
-    tar -czf /tmp/${PROJECT_NAME}.tar.gz \
-        --exclude='node_modules' \
-        --exclude='dist' \
-        --exclude='.wwebjs_auth' \
-        --exclude='.wwebjs_cache' \
-        --exclude='logs' \
-        --exclude='.git' \
-        --exclude='*.log' \
-        --exclude='.DS_Store' \
-        .
-
-    log_success "Fichiers compressés"
-
-    log_info "Upload vers le serveur..."
-    scp -i "$SSH_KEY" /tmp/${PROJECT_NAME}.tar.gz "$SERVER:${BOT_DIR}/"
-
-    log_success "Fichiers uploadés"
-
-    # Clean up
-    rm /tmp/${PROJECT_NAME}.tar.gz
-}
-
 deploy_bot() {
-    log_step "Déploiement du bot WhatsApp"
+    log_step "Déploiement du bot WhatsApp (build on server)"
 
     log_info "Écriture de la configuration Docker..."
     echo "$DOCKER_COMPOSE" | ssh_exec "cat > ${BOT_DIR}/docker-compose.yml"
@@ -155,18 +133,19 @@ deploy_bot() {
     log_info "Upload du fichier .env..."
     scp -i "$SSH_KEY" .env "$SERVER:${BOT_DIR}/.env"
 
-    log_info "Extraction et build sur le serveur..."
+    log_info "Pull du code et build sur le serveur..."
     ssh_exec "
         cd ${BOT_DIR}
 
-        # Extract uploaded files
-        echo 'Extraction des fichiers...'
-        rm -rf src
-        mkdir -p src
-        tar -xzf ${PROJECT_NAME}.tar.gz -C src
-        rm ${PROJECT_NAME}.tar.gz
+        # Clone or pull from GitHub
+        if [ -d src/.git ]; then
+            cd src && git fetch origin && git reset --hard origin/${BRANCH} && cd ..
+        else
+            rm -rf src
+            git clone --depth 1 -b ${BRANCH} ${REPO} src
+        fi
 
-        # Move .env to src for build context
+        # Copy .env into source for build
         cp .env src/.env
 
         cd src
@@ -318,7 +297,6 @@ main() {
             check_requirements
             test_ssh_connection
             setup_server
-            upload_files
             deploy_bot
             check_status
             show_qr_url
