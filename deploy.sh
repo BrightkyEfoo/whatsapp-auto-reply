@@ -73,7 +73,7 @@ services:
       - whatsapp_session:/app/.wwebjs_auth
       - whatsapp_logs:/app/logs
     ports:
-      - \"127.0.0.1:3454:3000\"
+      - \"0.0.0.0:3454:3000\"
     networks:
       - ${NETWORK_NAME}
     healthcheck:
