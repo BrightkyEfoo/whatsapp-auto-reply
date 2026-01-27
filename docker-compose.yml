@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  whatsapp-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: whatsapp-bot
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GIRLFRIEND_NUMBER=${GIRLFRIEND_NUMBER}
+      - PORT=${PORT:-3000}
+      - MAX_MESSAGES=${MAX_MESSAGES:-3}
+      - RESPONSE_DELAY_MIN=${RESPONSE_DELAY_MIN:-3}
+      - RESPONSE_DELAY_MAX=${RESPONSE_DELAY_MAX:-8}
+      - MORNING_START_HOUR=${MORNING_START_HOUR:-8}
+      - MORNING_END_HOUR=${MORNING_END_HOUR:-10}
+      - MORNING_MIN_MESSAGES=${MORNING_MIN_MESSAGES:-2}
+      - MORNING_MAX_MESSAGES=${MORNING_MAX_MESSAGES:-6}
+      - USE_AI_MORNING=${USE_AI_MORNING:-false}
+    volumes:
+      - whatsapp-session:/app/.wwebjs_auth
+      - whatsapp-logs:/app/logs
+    networks:
+      - whatsapp-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/status', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  whatsapp-session:
+    driver: local
+  whatsapp-logs:
+    driver: local
+
+networks:
+  whatsapp-network:
+    driver: bridge

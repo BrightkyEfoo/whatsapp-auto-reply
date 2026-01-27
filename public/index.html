@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Auto-Reply Bot</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-item.active {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .status-item.inactive {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .status-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .status-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .qr-section {
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        #qrcode {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .qr-instructions {
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 15px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 15px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .messages-section {
+            margin-top: 30px;
+        }
+
+        .messages-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .messages-list {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .message-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .message-item.sent {
+            border-left-color: #28a745;
+        }
+
+        .message-timestamp {
+            font-size: 11px;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .message-body {
+            color: #333;
+            font-size: 14px;
+        }
+
+        .message-count {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border-left: 4px solid #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 WhatsApp Auto-Reply Bot</h1>
+            <p>Gestion et surveillance de ton bot de réponses automatiques</p>
+        </div>
+
+        <div class="content">
+            <!-- Status Bar -->
+            <div class="status-bar">
+                <div class="status-item" id="status-connection">
+                    <div class="status-label">Connexion</div>
+                    <div class="status-value" id="connection-status">Déconnecté</div>
+                </div>
+                <div class="status-item" id="status-bot">
+                    <div class="status-label">Bot</div>
+                    <div class="status-value" id="bot-status">Inactif</div>
+                </div>
+                <div class="status-item" id="status-auto-reply">
+                    <div class="status-label">Réponses Auto</div>
+                    <div class="status-value" id="auto-reply-status">Désactivé</div>
+                </div>
+                <div class="status-item" id="status-morning">
+                    <div class="status-label">Messages Matinaux</div>
+                    <div class="status-value" id="morning-status">Désactivé</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Messages envoyés</div>
+                    <div class="status-value" id="message-count">0</div>
+                </div>
+            </div>
+
+            <!-- QR Code Section -->
+            <div id="qr-section" class="qr-section hidden">
+                <h3>Scanne ce QR Code avec WhatsApp</h3>
+                <div id="qrcode"></div>
+                <div class="qr-instructions">
+                    📱 Ouvre WhatsApp → Plus d'options → Appareils connectés → Connecter un appareil
+                </div>
+            </div>
+
+            <!-- Connected Alert -->
+            <div id="connected-alert" class="alert alert-success hidden">
+                ✅ WhatsApp connecté avec succès !
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading hidden">
+                <div class="spinner"></div>
+                <div>Connexion à WhatsApp en cours...</div>
+            </div>
+
+            <!-- Controls -->
+            <div class="controls">
+                <button class="btn btn-primary" id="btn-start" onclick="startBot()">
+                    ▶️ Démarrer le bot
+                </button>
+                <button class="btn btn-danger" id="btn-stop" onclick="stopBot()" disabled>
+                    ⏹️ Arrêter le bot
+                </button>
+                <button class="btn btn-success" id="btn-toggle" onclick="toggleAutoReply()" disabled>
+                    🔄 Activer réponses
+                </button>
+                <button class="btn btn-warning" id="btn-reset" onclick="resetConversations()">
+                    🔄 Reset conversations
+                </button>
+                <button class="btn btn-success" id="btn-morning-toggle" onclick="toggleMorningMessages()" disabled>
+                    🌅 Activer messages matinaux
+                </button>
+                <button class="btn btn-primary" id="btn-morning-test" onclick="testMorningMessages()" disabled>
+                    🧪 Tester messages matinaux
+                </button>
+            </div>
+
+            <!-- Messages Section -->
+            <div class="messages-section">
+                <div class="messages-header">📨 Historique des messages</div>
+                <div class="messages-list" id="messages-list">
+                    <div style="text-align: center; color: #6c757d; padding: 20px;">
+                        Aucun message pour le moment
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let isAutoReplyActive = true;
+        let isMorningMessagesActive = true;
+        let messageCount = 0;
+
+        // Elements
+        const qrSection = document.getElementById('qr-section');
+        const qrcodeDiv = document.getElementById('qrcode');
+        const connectedAlert = document.getElementById('connected-alert');
+        const loading = document.getElementById('loading');
+        const messagesList = document.getElementById('messages-list');
+
+        // Buttons
+        const btnStart = document.getElementById('btn-start');
+        const btnStop = document.getElementById('btn-stop');
+        const btnToggle = document.getElementById('btn-toggle');
+        const btnMorningToggle = document.getElementById('btn-morning-toggle');
+        const btnMorningTest = document.getElementById('btn-morning-test');
+
+        // Status
+        const connectionStatus = document.getElementById('connection-status');
+        const botStatus = document.getElementById('bot-status');
+        const autoReplyStatus = document.getElementById('auto-reply-status');
+        const morningStatus = document.getElementById('morning-status');
+        const messageCountEl = document.getElementById('message-count');
+        const statusConnection = document.getElementById('status-connection');
+        const statusBot = document.getElementById('status-bot');
+        const statusAutoReply = document.getElementById('status-auto-reply');
+        const statusMorning = document.getElementById('status-morning');
+
+        // Socket events
+        socket.on('connect', () => {
+            updateConnectionStatus('Connecté', true);
+            loadStatus();
+        });
+
+        socket.on('disconnect', () => {
+            updateConnectionStatus('Déconnecté', false);
+        });
+
+        socket.on('qr', (qr) => {
+            loading.classList.add('hidden');
+            qrSection.classList.remove('hidden');
+            connectedAlert.classList.add('hidden');
+            qrcodeDiv.innerHTML = '';
+            QRCode.toCanvas(qr, { width: 256, margin: 2 }, (error, canvas) => {
+                if (error) console.error(error);
+                qrcodeDiv.appendChild(canvas);
+            });
+        });
+
+        socket.on('ready', () => {
+            loading.classList.add('hidden');
+            qrSection.classList.add('hidden');
+            connectedAlert.classList.remove('hidden');
+            updateBotStatus('Connecté', true);
+            btnStop.disabled = false;
+            btnToggle.disabled = false;
+            btnMorningToggle.disabled = false;
+            btnMorningTest.disabled = false;
+        });
+
+        socket.on('authenticated', () => {
+            console.log('✅ Authenticated');
+        });
+
+        socket.on('disconnected', () => {
+            updateBotStatus('Déconnecté', false);
+            btnStop.disabled = true;
+            btnToggle.disabled = true;
+            btnMorningToggle.disabled = true;
+            btnMorningTest.disabled = true;
+            connectedAlert.classList.add('hidden');
+        });
+
+        socket.on('message_received', (msg) => {
+            addMessage(msg, 'received');
+        });
+
+        socket.on('message_sent', (msg) => {
+            addMessage(msg, 'sent');
+            messageCount++;
+            messageCountEl.textContent = messageCount;
+        });
+
+        socket.on('toggle', (data) => {
+            isAutoReplyActive = data.active;
+            updateAutoReplyStatus();
+        });
+
+        socket.on('reset', () => {
+            loadStatus();
+        });
+
+        socket.on('error', (error) => {
+            console.error('Error:', error);
+        });
+
+        // Morning messages events
+        socket.on('morning_toggle', (data) => {
+            isMorningMessagesActive = data.enabled;
+            updateMorningStatus();
+        });
+
+        socket.on('morning_messages_start', (data) => {
+            console.log(`🌅 Début envoi de ${data.count} messages matinaux`);
+            addSystemMessage(`🌅 Envoi de ${data.count} messages matinaux en cours...`);
+        });
+
+        socket.on('morning_message_sent', (data) => {
+            console.log(`✅ Message matinal ${data.index}/${data.total} envoyé`);
+            addMessage({
+                body: data.message,
+                timestamp: data.timestamp,
+                type: 'morning'
+            }, 'sent');
+        });
+
+        socket.on('morning_messages_complete', (data) => {
+            console.log(`✅ Tous les messages matinaux envoyés (${data.count})`);
+            addSystemMessage(`✅ ${data.count} messages matinaux envoyés avec succès`);
+        });
+
+        socket.on('morning_messages_error', (data) => {
+            console.error('❌ Erreur messages matinaux:', data.error);
+            addSystemMessage(`❌ Erreur: ${data.error}`, 'error');
+        });
+
+        // Functions
+        function updateConnectionStatus(text, isConnected) {
+            connectionStatus.textContent = text;
+            if (isConnected) {
+                statusConnection.classList.add('active');
+                statusConnection.classList.remove('inactive');
+            } else {
+                statusConnection.classList.remove('active');
+                statusConnection.classList.add('inactive');
+            }
+        }
+
+        function updateBotStatus(text, isActive) {
+            botStatus.textContent = text;
+            if (isActive) {
+                statusBot.classList.add('active');
+                statusBot.classList.remove('inactive');
+            } else {
+                statusBot.classList.remove('active');
+                statusBot.classList.add('inactive');
+            }
+        }
+
+        function updateAutoReplyStatus() {
+            autoReplyStatus.textContent = isAutoReplyActive ? 'Activé' : 'Désactivé';
+            if (isAutoReplyActive) {
+                statusAutoReply.classList.add('active');
+                statusAutoReply.classList.remove('inactive');
+                btnToggle.textContent = '⏸️ Désactiver réponses';
+                btnToggle.classList.remove('btn-success');
+                btnToggle.classList.add('btn-warning');
+            } else {
+                statusAutoReply.classList.remove('active');
+                statusAutoReply.classList.add('inactive');
+                btnToggle.textContent = '▶️ Activer réponses';
+                btnToggle.classList.remove('btn-warning');
+                btnToggle.classList.add('btn-success');
+            }
+        }
+
+        function updateMorningStatus() {
+            morningStatus.textContent = isMorningMessagesActive ? 'Activé' : 'Désactivé';
+            if (isMorningMessagesActive) {
+                statusMorning.classList.add('active');
+                statusMorning.classList.remove('inactive');
+                btnMorningToggle.textContent = '⏸️ Désactiver messages matinaux';
+                btnMorningToggle.classList.remove('btn-success');
+                btnMorningToggle.classList.add('btn-warning');
+            } else {
+                statusMorning.classList.remove('active');
+                statusMorning.classList.add('inactive');
+                btnMorningToggle.textContent = '▶️ Activer messages matinaux';
+                btnMorningToggle.classList.remove('btn-warning');
+                btnMorningToggle.classList.add('btn-success');
+            }
+        }
+
+        async function startBot() {
+            try {
+                btnStart.disabled = true;
+                loading.classList.remove('hidden');
+                qrSection.classList.add('hidden');
+                connectedAlert.classList.add('hidden');
+
+                const response = await fetch('/api/start', { method: 'POST' });
+                const data = await response.json();
+
+                if (!data.success) {
+                    alert('Erreur: ' + data.message);
+                    btnStart.disabled = false;
+                    loading.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Erreur lors du démarrage');
+                btnStart.disabled = false;
+                loading.classList.add('hidden');
+            }
+        }
+
+        async function stopBot() {
+            try {
+                const response = await fetch('/api/stop', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    btnStart.disabled = false;
+                    btnStop.disabled = true;
+                    btnToggle.disabled = true;
+                    updateBotStatus('Arrêté', false);
+                    qrSection.classList.add('hidden');
+                    loading.classList.add('hidden');
+                    connectedAlert.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Erreur lors de l\'arrêt');
+            }
+        }
+
+        async function toggleAutoReply() {
+            try {
+                const response = await fetch('/api/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ active: !isAutoReplyActive })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    isAutoReplyActive = data.active;
+                    updateAutoReplyStatus();
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Erreur lors du changement de statut');
+            }
+        }
+
+        async function resetConversations() {
+            if (!confirm('Réinitialiser toutes les conversations ?')) return;
+
+            try {
+                const response = await fetch('/api/reset', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Conversations réinitialisées');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Erreur lors de la réinitialisation');
+            }
+        }
+
+        async function toggleMorningMessages() {
+            try {
+                const response = await fetch('/api/morning/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: !isMorningMessagesActive })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    isMorningMessagesActive = data.enabled;
+                    updateMorningStatus();
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Erreur lors du changement de statut des messages matinaux');
+            }
+        }
+
+        async function testMorningMessages() {
+            if (!confirm('Envoyer des messages de test maintenant ?\n(Cela va envoyer 2-6 messages à ta copine immédiatement)')) return;
+
+            try {
+                const response = await fetch('/api/morning/test', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('✅ Envoi des messages de test en cours...\nRegarde l\'historique ci-dessous.');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Erreur lors de l\'envoi du test');
+            }
+        }
+
+        async function loadStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+
+                if (data.initialized && data.isReady) {
+                    updateBotStatus('Connecté', true);
+                    btnStart.disabled = true;
+                    btnStop.disabled = false;
+                    btnToggle.disabled = false;
+                    btnMorningToggle.disabled = false;
+                    btnMorningTest.disabled = false;
+                    connectedAlert.classList.remove('hidden');
+                }
+
+                if (data.state) {
+                    isAutoReplyActive = data.state.isActive;
+                    updateAutoReplyStatus();
+                }
+
+                if (data.scheduler) {
+                    isMorningMessagesActive = data.scheduler.isEnabled;
+                    updateMorningStatus();
+                }
+
+                // Load message history
+                const historyResponse = await fetch('/api/history');
+                const history = await historyResponse.json();
+
+                if (history.length > 0) {
+                    messagesList.innerHTML = '';
+                    history.forEach(msg => {
+                        addMessage(msg, msg.type || 'received');
+                    });
+                    messageCount = history.filter(m => m.type === 'sent').length;
+                    messageCountEl.textContent = messageCount;
+                }
+            } catch (error) {
+                console.error('Error loading status:', error);
+            }
+        }
+
+        function addMessage(msg, type) {
+            if (messagesList.querySelector('div[style]')) {
+                messagesList.innerHTML = '';
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message-item ${type === 'sent' || type === 'morning' ? 'sent' : ''}`;
+
+            const timestamp = new Date(msg.timestamp).toLocaleString('fr-FR');
+            const countBadge = msg.messageCount ? `<span class="message-count">#${msg.messageCount}</span>` : '';
+            const morningBadge = type === 'morning' ? '<span class="message-count">🌅 Matinal</span>' : '';
+
+            const icon = type === 'sent' || type === 'morning' ? '📤 Envoyé' : '📥 Reçu';
+
+            messageDiv.innerHTML = `
+                <div class="message-timestamp">${icon} · ${timestamp}${countBadge}${morningBadge}</div>
+                <div class="message-body">${msg.body}</div>
+            `;
+
+            messagesList.insertBefore(messageDiv, messagesList.firstChild);
+
+            // Limit to 50 messages
+            while (messagesList.children.length > 50) {
+                messagesList.removeChild(messagesList.lastChild);
+            }
+        }
+
+        function addSystemMessage(text, type = 'info') {
+            if (messagesList.querySelector('div[style]')) {
+                messagesList.innerHTML = '';
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message-item';
+            messageDiv.style.borderLeftColor = type === 'error' ? '#dc3545' : '#17a2b8';
+
+            const timestamp = new Date().toLocaleString('fr-FR');
+
+            messageDiv.innerHTML = `
+                <div class="message-timestamp">ℹ️ Système · ${timestamp}</div>
+                <div class="message-body">${text}</div>
+            `;
+
+            messagesList.insertBefore(messageDiv, messagesList.firstChild);
+
+            // Limit to 50 messages
+            while (messagesList.children.length > 50) {
+                messagesList.removeChild(messagesList.lastChild);
+            }
+        }
+
+        // Initial load
+        loadStatus();
+        updateAutoReplyStatus();
+        updateMorningStatus();
+    </script>
+</body>
+</html>
