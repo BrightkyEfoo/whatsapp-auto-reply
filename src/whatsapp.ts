@@ -1,4 +1,6 @@
-import { Client, LocalAuth, Message } from "whatsapp-web.js";
+import pkg from "whatsapp-web.js";
+const { Client, LocalAuth } = pkg;
+import type { Message, Client as ClientType } from "whatsapp-web.js";
 import { Server as SocketIOServer } from "socket.io";
 import { generateReply } from "./ai.js";
 import state from "./state.js";
@@ -24,7 +26,7 @@ interface StatusResponse {
 
 class WhatsAppClient {
   io: SocketIOServer;
-  client: Client | null;
+  client: ClientType | null;
   qrCode: string | null;
   isReady: boolean;
   messageHistory: MessageInfo[];
