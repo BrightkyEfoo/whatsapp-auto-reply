@@ -72,7 +72,8 @@ class MorningMessagesScheduler {
     }
 
     const now = new Date();
-    const hour = now.getHours();
+    // Convertir en GMT+1
+    const hour = now.getUTCHours() + 1;
     const today = now.toDateString();
 
     // Vérifier si on a déjà envoyé aujourd'hui
@@ -160,7 +161,7 @@ class MorningMessagesScheduler {
     }
   }
 
-  private async generateMorningMessage(index: number, total: number): Promise<string> {
+  private async generateMorningMessage(_index: number, _total: number): Promise<string> {
     const useAI = process.env.USE_AI_MORNING === "true";
 
     if (useAI) {

@@ -32,12 +32,12 @@ app.use(express.static(path.join(__dirname, "../public")));
 let whatsappClient: WhatsAppClient | null = null;
 
 // Routes
-app.get("/", (req: Request, res: Response) => {
+app.get("/", (_req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, "../public/index.html"));
 });
 
 // Status du bot
-app.get("/api/status", (req: Request, res: Response) => {
+app.get("/api/status", (_req: Request, res: Response) => {
   if (!whatsappClient) {
     return res.json({
       initialized: false,
@@ -47,14 +47,14 @@ app.get("/api/status", (req: Request, res: Response) => {
     });
   }
 
-  res.json({
+  return res.json({
     initialized: true,
     ...whatsappClient.getStatus()
   });
 });
 
 // Démarrer le bot
-app.post("/api/start", async (req: Request, res: Response) => {
+app.post("/api/start", async (_req: Request, res: Response) => {
   try {
     if (whatsappClient && whatsappClient.isReady) {
       return res.json({
@@ -72,13 +72,13 @@ app.post("/api/start", async (req: Request, res: Response) => {
       io.emit("error", { message: error instanceof Error ? error.message : "Unknown error" });
     });
 
-    res.json({
+    return res.json({
       success: true,
       message: "Bot en cours de démarrage..."
     });
   } catch (error) {
     console.error("❌ Erreur:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Unknown error"
     });
@@ -86,7 +86,7 @@ app.post("/api/start", async (req: Request, res: Response) => {
 });
 
 // Arrêter le bot
-app.post("/api/stop", async (req: Request, res: Response) => {
+app.post("/api/stop", async (_req: Request, res: Response) => {
   try {
     if (!whatsappClient) {
       return res.json({
@@ -99,13 +99,13 @@ app.post("/api/stop", async (req: Request, res: Response) => {
     await whatsappClient.destroy();
     whatsappClient = null;
 
-    res.json({
+    return res.json({
       success: true,
       message: "Bot arrêté"
     });
   } catch (error) {
     console.error("❌ Erreur:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Unknown error"
     });
@@ -127,25 +127,25 @@ app.post("/api/toggle", (req: Request, res: Response) => {
 });
 
 // Reset des conversations
-app.post("/api/reset", (req: Request, res: Response) => {
+app.post("/api/reset", (_req: Request, res: Response) => {
   state.resetAll();
   console.log("🔄 Toutes les conversations ont été réinitialisées");
 
   io.emit("reset");
 
-  res.json({
+  return res.json({
     success: true,
     message: "Conversations réinitialisées"
   });
 });
 
 // Historique des messages
-app.get("/api/history", (req: Request, res: Response) => {
+app.get("/api/history", (_req: Request, res: Response) => {
   if (!whatsappClient) {
     return res.json([]);
   }
 
-  res.json(whatsappClient.messageHistory || []);
+  return res.json(whatsappClient.messageHistory || []);
 });
 
 // ========== MORNING MESSAGES ROUTES ==========
@@ -165,14 +165,14 @@ app.post("/api/morning/toggle", (req: Request, res: Response) => {
   console.log(`🌅 Messages matinaux ${enabled ? "activés" : "désactivés"}`);
   io.emit("morning_toggle", { enabled });
 
-  res.json({
+  return res.json({
     success: true,
     enabled: whatsappClient.scheduler.getEnabled()
   });
 });
 
 // Envoyer un test de messages matinaux immédiatement
-app.post("/api/morning/test", async (req: Request, res: Response) => {
+app.post("/api/morning/test", async (_req: Request, res: Response) => {
   if (!whatsappClient || !whatsappClient.scheduler) {
     return res.status(400).json({
       success: false,
@@ -186,13 +186,13 @@ app.post("/api/morning/test", async (req: Request, res: Response) => {
       console.error("❌ Erreur test messages matinaux:", error);
     });
 
-    res.json({
+    return res.json({
       success: true,
       message: "Envoi des messages de test en cours..."
     });
   } catch (error) {
     console.error("❌ Erreur:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : "Unknown error"
     });
@@ -200,7 +200,7 @@ app.post("/api/morning/test", async (req: Request, res: Response) => {
 });
 
 // Reset du flag d'envoi journalier (pour forcer un nouvel envoi)
-app.post("/api/morning/reset", (req: Request, res: Response) => {
+app.post("/api/morning/reset", (_req: Request, res: Response) => {
   if (!whatsappClient || !whatsappClient.scheduler) {
     return res.status(400).json({
       success: false,
@@ -211,14 +211,14 @@ app.post("/api/morning/reset", (req: Request, res: Response) => {
   whatsappClient.scheduler.resetToday();
   console.log("🔄 Flag d'envoi journalier réinitialisé");
 
-  res.json({
+  return res.json({
     success: true,
     message: "Flag d'envoi réinitialisé"
   });
 });
 
 // Statistiques des messages matinaux
-app.get("/api/morning/stats", (req: Request, res: Response) => {
+app.get("/api/morning/stats", (_req: Request, res: Response) => {
   if (!whatsappClient || !whatsappClient.scheduler) {
     return res.json({
       isEnabled: false,
@@ -228,7 +228,7 @@ app.get("/api/morning/stats", (req: Request, res: Response) => {
     });
   }
 
-  res.json(whatsappClient.scheduler.getStats());
+  return res.json(whatsappClient.scheduler.getStats());
 });
 
 // Socket.IO

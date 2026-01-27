@@ -119,12 +119,6 @@ class WhatsAppClient {
       return;
     }
 
-    // Ignore si le bot est désactivé
-    if (!state.getActive()) {
-      console.log("🔕 Bot désactivé - message ignoré");
-      return;
-    }
-
     const messageInfo: MessageInfo = {
       from: msg.from,
       body: msg.body,
@@ -138,6 +132,26 @@ class WhatsAppClient {
 
     console.log(`📨 Message reçu: "${msg.body}"`);
     this.io.emit("message_received", messageInfo);
+
+    // Vérifier si le message commence par "!" pour mettre en pause
+    if (msg.body.trim().startsWith("!")) {
+      console.log("⏸️  Message avec '!' détecté - mise en pause jusqu'à demain");
+      state.pauseUntilTomorrow();
+      this.io.emit("bot_paused", { until: state.getStats().pausedUntil });
+      return;
+    }
+
+    // Vérifier si le bot peut répondre (actif, pas en pause, pas après 13h)
+    if (!state.canRespond()) {
+      if (state.isPaused()) {
+        console.log("⏸️  Bot en pause - message ignoré");
+      } else if (state.isPastCutoffTime()) {
+        console.log("🕐 Après 13h (GMT+1) - bot ne répond plus");
+      } else {
+        console.log("🔕 Bot désactivé - message ignoré");
+      }
+      return;
+    }
 
     try {
       // Incrémenter le compteur
