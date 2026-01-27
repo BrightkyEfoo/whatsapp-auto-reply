@@ -447,8 +447,8 @@
 
             <!-- Controls -->
             <div class="controls-grid">
-                <button class="btn btn-primary" id="btn-start" onclick="startBot()">
-                    Démarrer le bot
+                <button class="btn btn-primary" id="btn-start" onclick="startBot()" style="display: none;">
+                    Redémarrer le bot
                 </button>
                 <button class="btn btn-danger" id="btn-stop" onclick="stopBot()" disabled>
                     Arrêter le bot
@@ -662,6 +662,8 @@
         async function startBot() {
             try {
                 btnStart.disabled = true;
+                btnStart.style.display = 'none';
+                btnStop.disabled = false;
                 loading.classList.remove('hidden');
                 qrSection.classList.add('hidden');
                 connectedAlert.classList.add('hidden');
@@ -672,12 +674,16 @@
                 if (!data.success) {
                     alert('Erreur: ' + data.message);
                     btnStart.disabled = false;
+                    btnStart.style.display = 'block';
+                    btnStop.disabled = true;
                     loading.classList.add('hidden');
                 }
             } catch (error) {
                 console.error(error);
                 alert('Erreur lors du démarrage');
                 btnStart.disabled = false;
+                btnStart.style.display = 'block';
+                btnStop.disabled = true;
                 loading.classList.add('hidden');
             }
         }
@@ -689,8 +695,11 @@
 
                 if (data.success) {
                     btnStart.disabled = false;
+                    btnStart.style.display = 'block';
                     btnStop.disabled = true;
                     btnToggle.disabled = true;
+                    btnMorningToggle.disabled = true;
+                    btnMorningTest.disabled = true;
                     updateBotStatus('Arrêté', false);
                     qrSection.classList.add('hidden');
                     loading.classList.add('hidden');
@@ -779,12 +788,26 @@
 
                 if (data.initialized && data.isReady) {
                     updateBotStatus('Connecté', true);
-                    btnStart.disabled = true;
+                    btnStart.style.display = 'none';
                     btnStop.disabled = false;
                     btnToggle.disabled = false;
                     btnMorningToggle.disabled = false;
                     btnMorningTest.disabled = false;
                     connectedAlert.classList.remove('hidden');
+                    qrSection.classList.add('hidden');
+                    loading.classList.add('hidden');
+                } else if (data.initialized && !data.isReady) {
+                    // Bot en cours de connexion
+                    updateBotStatus('En cours de connexion...', false);
+                    btnStart.style.display = 'none';
+                    btnStop.disabled = false;
+                    loading.classList.remove('hidden');
+                } else {
+                    // Bot non initialisé (arrêté)
+                    updateBotStatus('Arrêté', false);
+                    btnStart.style.display = 'block';
+                    btnStart.disabled = false;
+                    btnStop.disabled = true;
                 }
 
                 if (data.state) {

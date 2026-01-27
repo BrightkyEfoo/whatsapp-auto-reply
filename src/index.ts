@@ -53,13 +53,20 @@ app.get("/api/status", (_req: Request, res: Response) => {
   });
 });
 
-// Démarrer le bot
+// Démarrer le bot (ou le redémarrer s'il a été arrêté)
 app.post("/api/start", async (_req: Request, res: Response) => {
   try {
     if (whatsappClient && whatsappClient.isReady) {
       return res.json({
         success: true,
-        message: "Bot déjà démarré"
+        message: "Bot déjà démarré et connecté"
+      });
+    }
+
+    if (whatsappClient && !whatsappClient.isReady) {
+      return res.json({
+        success: true,
+        message: "Bot en cours de connexion..."
       });
     }
 
@@ -252,7 +259,7 @@ io.on("connection", (socket) => {
 });
 
 // Démarrage du serveur
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, async () => {
   console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║                                                           ║
@@ -264,6 +271,16 @@ httpServer.listen(PORT, () => {
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
   `);
+
+  // Démarrer automatiquement le bot WhatsApp
+  console.log("🚀 Démarrage automatique du bot WhatsApp...");
+  whatsappClient = new WhatsAppClient(io);
+
+  try {
+    await whatsappClient.initialize();
+  } catch (error) {
+    console.error("❌ Erreur lors de l'initialisation automatique:", error);
+  }
 });
 
 // Gestion de l'arrêt propre
