@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp Auto-Reply Bot</title>
+    <title>WhatsApp Bot Dashboard</title>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
@@ -14,155 +14,224 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+            background: #111b21;
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+            color: #e9edef;
         }
 
         .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 900px;
-            width: 100%;
-            overflow: hidden;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #202c33;
+            padding: 20px 30px;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #2a3942;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .whatsapp-icon {
+            width: 40px;
+            height: 40px;
+            background: #25d366;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
             color: white;
-            padding: 30px;
-            text-align: center;
+            font-size: 20px;
         }
 
         .header h1 {
-            font-size: 28px;
-            margin-bottom: 10px;
+            font-size: 20px;
+            font-weight: 500;
+            color: #e9edef;
         }
 
         .header p {
-            opacity: 0.9;
-            font-size: 14px;
+            font-size: 13px;
+            color: #8696a0;
+            margin-top: 2px;
         }
 
-        .content {
+        .main-content {
+            background: #0b141a;
+            border-radius: 0 0 10px 10px;
             padding: 30px;
         }
 
-        .status-bar {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-
-        .status-item {
-            flex: 1;
-            min-width: 150px;
-            padding: 15px;
-            border-radius: 10px;
-            background: #f8f9fa;
-            border-left: 4px solid #667eea;
-        }
-
-        .status-item.active {
-            border-color: #28a745;
-            background: #d4edda;
-        }
-
-        .status-item.inactive {
-            border-color: #dc3545;
-            background: #f8d7da;
-        }
-
-        .status-label {
-            font-size: 12px;
-            color: #6c757d;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        .status-value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .qr-section {
-            text-align: center;
-            padding: 30px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            margin-bottom: 30px;
-        }
-
-        #qrcode {
-            display: inline-block;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            margin: 20px 0;
-        }
-
-        .qr-instructions {
-            color: #6c757d;
-            font-size: 14px;
-            margin-top: 15px;
-        }
-
-        .controls {
+        .status-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
             margin-bottom: 30px;
         }
 
-        .btn {
-            padding: 15px 25px;
-            border: none;
-            border-radius: 10px;
+        .status-card {
+            background: #202c33;
+            border-radius: 8px;
+            padding: 16px 20px;
+            border-left: 3px solid #3b4a54;
+            transition: all 0.2s;
+        }
+
+        .status-card.active {
+            border-left-color: #25d366;
+            background: linear-gradient(to right, rgba(37, 211, 102, 0.1), transparent);
+        }
+
+        .status-card.inactive {
+            border-left-color: #ea4141;
+            background: linear-gradient(to right, rgba(234, 65, 65, 0.1), transparent);
+        }
+
+        .status-label {
+            font-size: 12px;
+            color: #8696a0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .status-value {
             font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
+            color: #e9edef;
+            font-weight: 500;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #8696a0;
+            margin-right: 8px;
+        }
+
+        .status-card.active .status-indicator {
+            background: #25d366;
+            box-shadow: 0 0 8px rgba(37, 211, 102, 0.5);
+        }
+
+        .status-card.inactive .status-indicator {
+            background: #ea4141;
+            box-shadow: 0 0 8px rgba(234, 65, 65, 0.5);
+        }
+
+        .qr-section {
+            background: #202c33;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            border: 1px solid #2a3942;
+        }
+
+        .qr-section h3 {
+            font-size: 18px;
+            font-weight: 500;
+            color: #e9edef;
+            margin-bottom: 20px;
+        }
+
+        #qrcode {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+
+        .qr-instructions {
+            color: #8696a0;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .alert {
+            background: #1e3a27;
+            border: 1px solid #25d366;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 30px;
+            color: #e9edef;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-icon {
+            width: 24px;
+            height: 24px;
+            background: #25d366;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            flex-shrink: 0;
         }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #8696a0;
         }
 
-        .btn:active {
-            transform: translateY(0);
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 15px;
+            border: 3px solid #202c33;
+            border-top-color: #25d366;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
 
-        .btn-success {
-            background: #28a745;
-            color: white;
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 30px;
         }
 
-        .btn-danger {
-            background: #dc3545;
-            color: white;
+        .btn {
+            background: #202c33;
+            border: 1px solid #2a3942;
+            color: #e9edef;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
         }
 
-        .btn-warning {
-            background: #ffc107;
-            color: #333;
+        .btn:hover:not(:disabled) {
+            background: #2a3942;
+            border-color: #3b4a54;
+        }
+
+        .btn:active:not(:disabled) {
+            transform: scale(0.98);
         }
 
         .btn:disabled {
@@ -170,153 +239,204 @@
             cursor: not-allowed;
         }
 
+        .btn-primary {
+            background: #25d366;
+            border-color: #25d366;
+            color: #111b21;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #20bd5a;
+            border-color: #20bd5a;
+        }
+
+        .btn-danger {
+            background: #ea4141;
+            border-color: #ea4141;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #d63636;
+            border-color: #d63636;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            border-color: #f39c12;
+            color: #111b21;
+        }
+
+        .btn-warning:hover:not(:disabled) {
+            background: #e67e22;
+            border-color: #e67e22;
+        }
+
         .messages-section {
-            margin-top: 30px;
+            background: #202c33;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #2a3942;
         }
 
         .messages-header {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #333;
+            padding: 16px 20px;
+            background: #2a3942;
+            border-bottom: 1px solid #3b4a54;
+            font-size: 15px;
+            font-weight: 500;
+            color: #e9edef;
         }
 
         .messages-list {
-            max-height: 400px;
+            max-height: 500px;
             overflow-y: auto;
-            background: #f8f9fa;
-            border-radius: 10px;
             padding: 15px;
         }
 
+        .messages-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .messages-list::-webkit-scrollbar-track {
+            background: #0b141a;
+        }
+
+        .messages-list::-webkit-scrollbar-thumb {
+            background: #2a3942;
+            border-radius: 3px;
+        }
+
         .message-item {
-            background: white;
-            padding: 12px;
+            background: #0b141a;
             border-radius: 8px;
+            padding: 12px 16px;
             margin-bottom: 10px;
-            border-left: 4px solid #667eea;
+            border-left: 3px solid #3b4a54;
         }
 
         .message-item.sent {
-            border-left-color: #28a745;
+            border-left-color: #25d366;
+            background: linear-gradient(to right, rgba(37, 211, 102, 0.1), transparent);
         }
 
-        .message-timestamp {
+        .message-item.received {
+            border-left-color: #00a5f4;
+            background: linear-gradient(to right, rgba(0, 165, 244, 0.1), transparent);
+        }
+
+        .message-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #8696a0;
+        }
+
+        .message-direction {
+            font-weight: 500;
+        }
+
+        .message-sent .message-direction {
+            color: #25d366;
+        }
+
+        .message-received .message-direction {
+            color: #00a5f4;
+        }
+
+        .message-badge {
+            background: #2a3942;
+            padding: 2px 8px;
+            border-radius: 10px;
             font-size: 11px;
-            color: #6c757d;
-            margin-bottom: 5px;
+            color: #8696a0;
         }
 
         .message-body {
-            color: #333;
+            color: #e9edef;
             font-size: 14px;
+            line-height: 1.5;
         }
 
-        .message-count {
-            display: inline-block;
-            background: #667eea;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            margin-left: 8px;
-        }
-
-        .loading {
+        .empty-state {
             text-align: center;
-            padding: 40px;
-            color: #6c757d;
-        }
-
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            padding: 40px 20px;
+            color: #8696a0;
         }
 
         .hidden {
             display: none !important;
-        }
-
-        .alert {
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border-left: 4px solid #28a745;
-        }
-
-        .alert-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border-left: 4px solid #17a2b8;
-        }
-
-        .alert-warning {
-            background: #fff3cd;
-            color: #856404;
-            border-left: 4px solid #ffc107;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🤖 WhatsApp Auto-Reply Bot</h1>
-            <p>Gestion et surveillance de ton bot de réponses automatiques</p>
+            <div class="header-left">
+                <div class="whatsapp-icon">W</div>
+                <div>
+                    <h1>WhatsApp Bot Dashboard</h1>
+                    <p>Gestion des réponses automatiques</p>
+                </div>
+            </div>
         </div>
 
-        <div class="content">
-            <!-- Status Bar -->
-            <div class="status-bar">
-                <div class="status-item" id="status-connection">
+        <div class="main-content">
+            <!-- Status Grid -->
+            <div class="status-grid">
+                <div class="status-card" id="status-connection">
                     <div class="status-label">Connexion</div>
-                    <div class="status-value" id="connection-status">Déconnecté</div>
+                    <div class="status-value">
+                        <span class="status-indicator"></span>
+                        <span id="connection-status">Déconnecté</span>
+                    </div>
                 </div>
-                <div class="status-item" id="status-bot">
-                    <div class="status-label">Bot</div>
-                    <div class="status-value" id="bot-status">Inactif</div>
+                <div class="status-card" id="status-bot">
+                    <div class="status-label">Bot WhatsApp</div>
+                    <div class="status-value">
+                        <span class="status-indicator"></span>
+                        <span id="bot-status">Inactif</span>
+                    </div>
                 </div>
-                <div class="status-item" id="status-auto-reply">
+                <div class="status-card" id="status-auto-reply">
                     <div class="status-label">Réponses Auto</div>
-                    <div class="status-value" id="auto-reply-status">Désactivé</div>
+                    <div class="status-value">
+                        <span class="status-indicator"></span>
+                        <span id="auto-reply-status">Désactivé</span>
+                    </div>
                 </div>
-                <div class="status-item" id="status-morning">
+                <div class="status-card" id="status-morning">
                     <div class="status-label">Messages Matinaux</div>
-                    <div class="status-value" id="morning-status">Désactivé</div>
+                    <div class="status-value">
+                        <span class="status-indicator"></span>
+                        <span id="morning-status">Désactivé</span>
+                    </div>
                 </div>
-                <div class="status-item">
+                <div class="status-card">
                     <div class="status-label">Messages envoyés</div>
-                    <div class="status-value" id="message-count">0</div>
+                    <div class="status-value">
+                        <span id="message-count">0</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- QR Code Section -->
+            <!-- QR Section -->
             <div id="qr-section" class="qr-section hidden">
-                <h3>Scanne ce QR Code avec WhatsApp</h3>
+                <h3>Scannez le QR Code avec WhatsApp</h3>
                 <div id="qrcode"></div>
                 <div class="qr-instructions">
-                    📱 Ouvre WhatsApp → Plus d'options → Appareils connectés → Connecter un appareil
+                    1. Ouvrez WhatsApp sur votre téléphone<br>
+                    2. Menu → Appareils connectés → Connecter un appareil<br>
+                    3. Scannez ce code QR
                 </div>
             </div>
 
             <!-- Connected Alert -->
-            <div id="connected-alert" class="alert alert-success hidden">
-                ✅ WhatsApp connecté avec succès !
+            <div id="connected-alert" class="alert hidden">
+                <div class="alert-icon">✓</div>
+                <div>WhatsApp connecté avec succès</div>
             </div>
 
             <!-- Loading -->
@@ -326,34 +446,32 @@
             </div>
 
             <!-- Controls -->
-            <div class="controls">
+            <div class="controls-grid">
                 <button class="btn btn-primary" id="btn-start" onclick="startBot()">
-                    ▶️ Démarrer le bot
+                    Démarrer le bot
                 </button>
                 <button class="btn btn-danger" id="btn-stop" onclick="stopBot()" disabled>
-                    ⏹️ Arrêter le bot
+                    Arrêter le bot
                 </button>
-                <button class="btn btn-success" id="btn-toggle" onclick="toggleAutoReply()" disabled>
-                    🔄 Activer réponses
+                <button class="btn" id="btn-toggle" onclick="toggleAutoReply()" disabled>
+                    Activer réponses
                 </button>
                 <button class="btn btn-warning" id="btn-reset" onclick="resetConversations()">
-                    🔄 Reset conversations
+                    Reset conversations
                 </button>
-                <button class="btn btn-success" id="btn-morning-toggle" onclick="toggleMorningMessages()" disabled>
-                    🌅 Activer messages matinaux
+                <button class="btn" id="btn-morning-toggle" onclick="toggleMorningMessages()" disabled>
+                    Activer messages matinaux
                 </button>
-                <button class="btn btn-primary" id="btn-morning-test" onclick="testMorningMessages()" disabled>
-                    🧪 Tester messages matinaux
+                <button class="btn" id="btn-morning-test" onclick="testMorningMessages()" disabled>
+                    Tester messages matinaux
                 </button>
             </div>
 
             <!-- Messages Section -->
             <div class="messages-section">
-                <div class="messages-header">📨 Historique des messages</div>
+                <div class="messages-header">Historique des messages</div>
                 <div class="messages-list" id="messages-list">
-                    <div style="text-align: center; color: #6c757d; padding: 20px;">
-                        Aucun message pour le moment
-                    </div>
+                    <div class="empty-state">Aucun message pour le moment</div>
                 </div>
             </div>
         </div>
@@ -401,13 +519,19 @@
         });
 
         socket.on('qr', (qr) => {
+            console.log('QR Code reçu');
             loading.classList.add('hidden');
             qrSection.classList.remove('hidden');
             connectedAlert.classList.add('hidden');
             qrcodeDiv.innerHTML = '';
-            QRCode.toCanvas(qr, { width: 256, margin: 2 }, (error, canvas) => {
-                if (error) console.error(error);
-                qrcodeDiv.appendChild(canvas);
+
+            new QRCode(qrcodeDiv, {
+                text: qr,
+                width: 256,
+                height: 256,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
             });
         });
 
@@ -423,7 +547,7 @@
         });
 
         socket.on('authenticated', () => {
-            console.log('✅ Authenticated');
+            console.log('Authentifié');
         });
 
         socket.on('disconnected', () => {
@@ -458,19 +582,16 @@
             console.error('Error:', error);
         });
 
-        // Morning messages events
         socket.on('morning_toggle', (data) => {
             isMorningMessagesActive = data.enabled;
             updateMorningStatus();
         });
 
         socket.on('morning_messages_start', (data) => {
-            console.log(`🌅 Début envoi de ${data.count} messages matinaux`);
-            addSystemMessage(`🌅 Envoi de ${data.count} messages matinaux en cours...`);
+            console.log(`Envoi de ${data.count} messages matinaux`);
         });
 
         socket.on('morning_message_sent', (data) => {
-            console.log(`✅ Message matinal ${data.index}/${data.total} envoyé`);
             addMessage({
                 body: data.message,
                 timestamp: data.timestamp,
@@ -479,13 +600,11 @@
         });
 
         socket.on('morning_messages_complete', (data) => {
-            console.log(`✅ Tous les messages matinaux envoyés (${data.count})`);
-            addSystemMessage(`✅ ${data.count} messages matinaux envoyés avec succès`);
+            console.log(`${data.count} messages matinaux envoyés`);
         });
 
         socket.on('morning_messages_error', (data) => {
-            console.error('❌ Erreur messages matinaux:', data.error);
-            addSystemMessage(`❌ Erreur: ${data.error}`, 'error');
+            console.error('Erreur messages matinaux:', data.error);
         });
 
         // Functions
@@ -516,15 +635,13 @@
             if (isAutoReplyActive) {
                 statusAutoReply.classList.add('active');
                 statusAutoReply.classList.remove('inactive');
-                btnToggle.textContent = '⏸️ Désactiver réponses';
-                btnToggle.classList.remove('btn-success');
+                btnToggle.textContent = 'Désactiver réponses';
                 btnToggle.classList.add('btn-warning');
             } else {
                 statusAutoReply.classList.remove('active');
                 statusAutoReply.classList.add('inactive');
-                btnToggle.textContent = '▶️ Activer réponses';
+                btnToggle.textContent = 'Activer réponses';
                 btnToggle.classList.remove('btn-warning');
-                btnToggle.classList.add('btn-success');
             }
         }
 
@@ -533,15 +650,13 @@
             if (isMorningMessagesActive) {
                 statusMorning.classList.add('active');
                 statusMorning.classList.remove('inactive');
-                btnMorningToggle.textContent = '⏸️ Désactiver messages matinaux';
-                btnMorningToggle.classList.remove('btn-success');
+                btnMorningToggle.textContent = 'Désactiver messages matinaux';
                 btnMorningToggle.classList.add('btn-warning');
             } else {
                 statusMorning.classList.remove('active');
                 statusMorning.classList.add('inactive');
-                btnMorningToggle.textContent = '▶️ Activer messages matinaux';
+                btnMorningToggle.textContent = 'Activer messages matinaux';
                 btnMorningToggle.classList.remove('btn-warning');
-                btnMorningToggle.classList.add('btn-success');
             }
         }
 
@@ -615,7 +730,7 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    alert('✅ Conversations réinitialisées');
+                    alert('Conversations réinitialisées');
                 }
             } catch (error) {
                 console.error(error);
@@ -643,14 +758,14 @@
         }
 
         async function testMorningMessages() {
-            if (!confirm('Envoyer des messages de test maintenant ?\n(Cela va envoyer 2-6 messages à ta copine immédiatement)')) return;
+            if (!confirm('Envoyer des messages de test maintenant ?')) return;
 
             try {
                 const response = await fetch('/api/morning/test', { method: 'POST' });
                 const data = await response.json();
 
                 if (data.success) {
-                    alert('✅ Envoi des messages de test en cours...\nRegarde l\'historique ci-dessous.');
+                    alert('Envoi des messages de test en cours');
                 }
             } catch (error) {
                 console.error(error);
@@ -701,46 +816,27 @@
         }
 
         function addMessage(msg, type) {
-            if (messagesList.querySelector('div[style]')) {
+            if (messagesList.querySelector('.empty-state')) {
                 messagesList.innerHTML = '';
             }
 
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message-item ${type === 'sent' || type === 'morning' ? 'sent' : ''}`;
+            messageDiv.className = `message-item message-${type}`;
 
             const timestamp = new Date(msg.timestamp).toLocaleString('fr-FR');
-            const countBadge = msg.messageCount ? `<span class="message-count">#${msg.messageCount}</span>` : '';
-            const morningBadge = type === 'morning' ? '<span class="message-count">🌅 Matinal</span>' : '';
-
-            const icon = type === 'sent' || type === 'morning' ? '📤 Envoyé' : '📥 Reçu';
+            const direction = type === 'sent' || type === 'morning' ? 'Envoyé' : 'Reçu';
+            const countBadge = msg.messageCount ? `<span class="message-badge">#${msg.messageCount}</span>` : '';
+            const morningBadge = type === 'morning' ? '<span class="message-badge">Matinal</span>' : '';
 
             messageDiv.innerHTML = `
-                <div class="message-timestamp">${icon} · ${timestamp}${countBadge}${morningBadge}</div>
+                <div class="message-meta">
+                    <span class="message-direction">${direction}</span>
+                    <span>•</span>
+                    <span>${timestamp}</span>
+                    ${countBadge}
+                    ${morningBadge}
+                </div>
                 <div class="message-body">${msg.body}</div>
-            `;
-
-            messagesList.insertBefore(messageDiv, messagesList.firstChild);
-
-            // Limit to 50 messages
-            while (messagesList.children.length > 50) {
-                messagesList.removeChild(messagesList.lastChild);
-            }
-        }
-
-        function addSystemMessage(text, type = 'info') {
-            if (messagesList.querySelector('div[style]')) {
-                messagesList.innerHTML = '';
-            }
-
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message-item';
-            messageDiv.style.borderLeftColor = type === 'error' ? '#dc3545' : '#17a2b8';
-
-            const timestamp = new Date().toLocaleString('fr-FR');
-
-            messageDiv.innerHTML = `
-                <div class="message-timestamp">ℹ️ Système · ${timestamp}</div>
-                <div class="message-body">${text}</div>
             `;
 
             messagesList.insertBefore(messageDiv, messagesList.firstChild);
