@@ -73,7 +73,7 @@ services:
       - whatsapp_session:/app/.wwebjs_auth
       - whatsapp_logs:/app/logs
     ports:
-      - \"127.0.0.1:3000:3000\"
+      - \"127.0.0.1:3454:3000\"
     networks:
       - ${NETWORK_NAME}
     healthcheck:
@@ -220,8 +220,8 @@ start_bot() {
 show_qr_url() {
     log_step "URL d'accès"
     echo ""
-    log_info "Interface web: http://neuilly-srv:3000"
-    log_info "ou via IP: http://[IP_DU_SERVEUR]:3000"
+    log_info "Interface web: http://neuilly-srv:3454"
+    log_info "ou via IP: http://[IP_DU_SERVEUR]:3454"
     echo ""
     log_warn "Scanner le QR code pour connecter WhatsApp"
     echo ""
