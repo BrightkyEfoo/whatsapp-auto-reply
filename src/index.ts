@@ -238,6 +238,61 @@ app.get("/api/morning/stats", (_req: Request, res: Response) => {
   return res.json(whatsappClient.scheduler.getStats());
 });
 
+// ========== TEST MODE ROUTES ==========
+const isTestMode = process.env.NODE_ENV === "test";
+
+// Vérifier si on est en mode test
+app.get("/api/test/mode", (_req: Request, res: Response) => {
+  return res.json({ testMode: isTestMode });
+});
+
+// Simuler un message entrant (mode test uniquement)
+app.post("/api/test/simulate-message", async (req: Request, res: Response) => {
+  if (!isTestMode) {
+    return res.status(403).json({ success: false, message: "Mode test non activé" });
+  }
+
+  const { message } = req.body;
+  if (!message) {
+    return res.status(400).json({ success: false, message: "Message requis" });
+  }
+
+  if (!whatsappClient) {
+    return res.status(400).json({ success: false, message: "Bot non initialisé" });
+  }
+
+  try {
+    await whatsappClient.handleTestMessage(message);
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Erreur"
+    });
+  }
+});
+
+// Démarrer une conversation automatique (mode test)
+app.post("/api/test/start-conversation", async (_req: Request, res: Response) => {
+  if (!isTestMode) {
+    return res.status(403).json({ success: false, message: "Mode test non activé" });
+  }
+
+  if (!whatsappClient) {
+    return res.status(400).json({ success: false, message: "Bot non initialisé" });
+  }
+
+  try {
+    whatsappClient.startTestConversation();
+    return res.json({ success: true, message: "Conversation de test démarrée" });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : "Erreur"
+    });
+  }
+});
+
 // Socket.IO
 io.on("connection", (socket) => {
   console.log("👤 Client connecté:", socket.id);

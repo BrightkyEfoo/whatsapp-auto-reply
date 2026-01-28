@@ -31,6 +31,8 @@ class WhatsAppClient {
   isReady: boolean;
   messageHistory: MessageInfo[];
   scheduler: MorningMessagesScheduler | null;
+  private isTestMode: boolean;
+  private testConversationInterval: NodeJS.Timeout | null;
 
   constructor(io: SocketIOServer) {
     this.io = io;
@@ -39,9 +41,24 @@ class WhatsAppClient {
     this.isReady = false;
     this.messageHistory = [];
     this.scheduler = null;
+    this.isTestMode = process.env.NODE_ENV === "test";
+    this.testConversationInterval = null;
   }
 
   async initialize(): Promise<void> {
+    // En mode test, simuler une connexion réussie
+    if (this.isTestMode) {
+      console.log("[TEST MODE] Simulation de connexion WhatsApp...");
+      await new Promise(r => setTimeout(r, 1000));
+      this.isReady = true;
+      this.io.emit("ready");
+      console.log("[TEST MODE] WhatsApp simulé connecté");
+
+      // Démarrer le scheduler
+      this.scheduler = new MorningMessagesScheduler(this, this.io);
+      return;
+    }
+
     this.client = new Client({
       authStrategy: new LocalAuth({
         dataPath: ".wwebjs_auth"
@@ -213,6 +230,10 @@ class WhatsAppClient {
   }
 
   async destroy(): Promise<void> {
+    if (this.testConversationInterval) {
+      clearInterval(this.testConversationInterval);
+      this.testConversationInterval = null;
+    }
     if (this.scheduler) {
       this.scheduler.stop();
       this.scheduler = null;
@@ -220,6 +241,110 @@ class WhatsAppClient {
     if (this.client) {
       await this.client.destroy();
     }
+  }
+
+  // ========== TEST MODE METHODS ==========
+
+  async handleTestMessage(messageBody: string): Promise<void> {
+    if (!this.isTestMode) return;
+
+    const girlfriendNumber = process.env.GIRLFRIEND_NUMBER || "test@c.us";
+
+    const messageInfo: MessageInfo = {
+      from: girlfriendNumber,
+      body: messageBody,
+      timestamp: new Date().toISOString()
+    };
+
+    this.messageHistory.unshift(messageInfo);
+    if (this.messageHistory.length > 50) {
+      this.messageHistory = this.messageHistory.slice(0, 50);
+    }
+
+    console.log(`[TEST] Message reçu: "${messageBody}"`);
+    this.io.emit("message_received", messageInfo);
+
+    // Vérifier si le message commence par "!"
+    if (messageBody.trim().startsWith("!")) {
+      console.log("[TEST] Message avec '!' - pause jusqu'à demain");
+      state.pauseUntilTomorrow();
+      this.io.emit("bot_paused", { until: state.getStats().pausedUntil });
+      return;
+    }
+
+    // Vérifier si le bot peut répondre
+    if (!state.canRespond()) {
+      console.log("[TEST] Bot ne peut pas répondre");
+      return;
+    }
+
+    try {
+      const count = state.increment(girlfriendNumber);
+      console.log(`[TEST] Message n°${count}`);
+
+      // Délai simulé
+      const minDelay = parseInt(process.env.RESPONSE_DELAY_MIN || "3") * 1000;
+      const maxDelay = parseInt(process.env.RESPONSE_DELAY_MAX || "8") * 1000;
+      const delay = Math.floor(Math.random() * (maxDelay - minDelay + 1)) + minDelay;
+
+      console.log(`[TEST] Attente de ${delay / 1000}s...`);
+      await new Promise(r => setTimeout(r, delay));
+
+      // Générer la réponse
+      const reply = await generateReply(messageBody, count);
+      console.log(`[TEST] Réponse: "${reply}"`);
+
+      const responseInfo: MessageInfo = {
+        to: girlfriendNumber,
+        body: reply,
+        timestamp: new Date().toISOString(),
+        messageCount: count,
+        type: "sent"
+      };
+
+      this.messageHistory.unshift(responseInfo);
+      this.io.emit("message_sent", responseInfo);
+
+      // Reset si on a atteint le max
+      const maxMessages = parseInt(process.env.MAX_MESSAGES || "3");
+      if (count >= maxMessages) {
+        console.log("[TEST] Limite atteinte - reset");
+        state.reset(girlfriendNumber);
+      }
+    } catch (error) {
+      console.error("[TEST] Erreur:", error);
+    }
+  }
+
+  startTestConversation(): void {
+    if (!this.isTestMode) return;
+
+    console.log("[TEST] Démarrage conversation automatique...");
+
+    const testMessages = [
+      "Coucou bébé",
+      "Tu fais quoi ?",
+      "Tu me manques",
+      "T'es là ?",
+      "Je pense à toi"
+    ];
+
+    let messageIndex = 0;
+
+    // Envoyer le premier message immédiatement
+    const firstMsg = testMessages[messageIndex];
+    this.handleTestMessage(firstMsg);
+    messageIndex++;
+
+    // Puis envoyer un message toutes les 15-30 secondes
+    this.testConversationInterval = setInterval(() => {
+      if (messageIndex >= testMessages.length) {
+        messageIndex = 0;
+      }
+      const msg = testMessages[messageIndex];
+      this.handleTestMessage(msg);
+      messageIndex++;
+    }, Math.random() * 15000 + 15000);
   }
 }
 

@@ -465,6 +465,12 @@
                 <button class="btn" id="btn-morning-test" onclick="testMorningMessages()" disabled>
                     Tester messages matinaux
                 </button>
+                <button class="btn btn-primary" id="btn-test-conversation" onclick="startTestConversation()" style="display: none;">
+                    Start conversation
+                </button>
+                <button class="btn" id="btn-test-message" onclick="sendTestMessage()" style="display: none;">
+                    Envoyer message test
+                </button>
             </div>
 
             <!-- Messages Section -->
@@ -869,10 +875,66 @@
             }
         }
 
+        // ========== TEST MODE ==========
+        let isTestMode = false;
+        const btnTestConversation = document.getElementById('btn-test-conversation');
+        const btnTestMessage = document.getElementById('btn-test-message');
+
+        async function checkTestMode() {
+            try {
+                const response = await fetch('/api/test/mode');
+                const data = await response.json();
+                isTestMode = data.testMode;
+
+                if (isTestMode) {
+                    btnTestConversation.style.display = 'block';
+                    btnTestMessage.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Erreur check test mode:', error);
+            }
+        }
+
+        async function startTestConversation() {
+            try {
+                const response = await fetch('/api/test/start-conversation', { method: 'POST' });
+                const data = await response.json();
+
+                if (data.success) {
+                    console.log('Conversation test démarrée');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors du démarrage de la conversation');
+            }
+        }
+
+        async function sendTestMessage() {
+            const message = prompt('Message à envoyer:');
+            if (!message) return;
+
+            try {
+                const response = await fetch('/api/test/simulate-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                const data = await response.json();
+
+                if (!data.success) {
+                    alert('Erreur: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                alert('Erreur lors de l\'envoi du message');
+            }
+        }
+
         // Initial load
         loadStatus();
         updateAutoReplyStatus();
         updateMorningStatus();
+        checkTestMode();
     </script>
 </body>
 </html>
